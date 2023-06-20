@@ -100,12 +100,12 @@ app.get('/me/:userId', async (req, res) => {
   }
 });
 
-app.get('/saldo/:userId', async (req, res) => {
-  const { userId } = req.params;
+app.get('/saldo', async (req, res) => {
+  const { userId } = req.query;
 
   try {
     const conta = await prisma.conta.findUnique({
-      where: { userId: parseInt(userId) },
+      where: { userId: parseInt(userId as string) },
     });
 
     if (conta) {
@@ -119,69 +119,146 @@ app.get('/saldo/:userId', async (req, res) => {
   }
 });
 
-app.put('/contas/:contaId/saldo', async (req, res) => {
-  const { contaId } = req.params;
-  const { valor } = req.body;
+app.put('/saldo/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { saldo } = req.body;
 
   try {
-    const conta = await prisma.conta.findUnique({
-      where: { id: parseInt(contaId) },
-      include: { user: true }, // Incluir o relacionamento com o usuário
+    const existingConta = await prisma.conta.findFirst({
+      where: { userId: parseInt(userId) },
     });
 
-    if (!conta) {
-      return res.status(404).json({ error: 'Conta não encontrada' });
+    if (!existingConta) {
+      return res.status(404).json({ error: 'Conta não encontrada.' });
     }
 
-    const novoSaldo = conta.saldo + parseFloat(valor);
+    const updatedSaldo = existingConta.saldo + parseInt(saldo);
 
-    await prisma.conta.update({
-      where: { id: parseInt(contaId) },
-      data: { saldo: novoSaldo },
+    const updatedConta = await prisma.conta.update({
+      where: { userId: parseInt(userId) },
+      data: { saldo: updatedSaldo },
     });
 
-    // Atualizar o saldo também no objeto de usuário retornado
-    const updatedUser = { ...conta.user, contas: [{ ...conta, saldo: novoSaldo }] };
-
-    return res.status(200).json(updatedUser);
+    res.json(updatedConta);
   } catch (error) {
-    console.error('Ocorreu um erro ao adicionar saldo:', error);
-    return res.status(500).json({ error: 'Erro ao adicionar saldo' });
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao atualizar saldo.' });
   }
 });
 
-app.post('/contas/:contaId/saldo', async (req, res) => {
-  const { contaId } = req.params;
-  const { valor } = req.body;
+app.put('/saldo/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { saldo } = req.body;
 
   try {
-    const conta = await prisma.conta.findUnique({
-      where: { id: parseInt(contaId) },
-      include: { user: true }, // Incluir o relacionamento com o usuário
+    const existingConta = await prisma.conta.findFirst({
+      where: { userId: parseInt(userId) },
     });
 
-    if (!conta) {
-      return res.status(404).json({ error: 'Conta não encontrada' });
+    if (!existingConta) {
+      return res.status(404).json({ error: 'Conta não encontrada.' });
     }
 
-    const novoSaldo = conta.saldo + parseFloat(valor);
+    const updatedSaldo = existingConta.saldo - parseInt(saldo);
 
-    await prisma.conta.update({
-      where: { id: parseInt(contaId) },
-      data: { saldo: novoSaldo },
+    if (updatedSaldo < 0) {
+      return res.status(400).json({ error: 'Saldo insuficiente para a retirada.' });
+    }
+
+    const updatedConta = await prisma.conta.update({
+      where: { userId: parseInt(userId) },
+      data: { saldo: updatedSaldo },
     });
 
-    // Atualizar o saldo também no objeto de usuário retornado
-    const updatedUser = { ...conta.user, contas: [{ ...conta, saldo: novoSaldo }] };
-
-    return res.status(200).json(updatedUser);
+    res.json(updatedConta);
   } catch (error) {
-    console.error('Ocorreu um erro ao adicionar saldo:', error);
-    return res.status(500).json({ error: 'Erro ao adicionar saldo' });
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao atualizar saldo.' });
+  }
+});
+
+app.put('/saldo/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { saldo, descricao } = req.body;
+
+  try {
+    const existingConta = await prisma.conta.findFirst({
+      where: { userId: parseInt(userId) },
+    });
+
+    if (!existingConta) {
+      return res.status(404).json({ error: 'Conta não encontrada.' });
+    }
+
+    const updatedSaldo = existingConta.saldo + parseInt(saldo);
+
+    const updatedConta = await prisma.conta.update({
+      where: { userId: parseInt(userId) },
+      data: { saldo: updatedSaldo },
+    });
+
+    const transacao = await prisma.transacao.create({
+      data: {
+        descricao: descricao,
+        valor: parseFloat(saldo),
+        userId: parseInt(userId),
+        contaId: existingConta.id,
+      },
+    });
+
+    res.json(updatedConta);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao atualizar saldo.' });
   }
 });
 
 
+app.get('/transacoes/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const transacao = await prisma.transacao.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (transacao) {
+      res.json({ descricao: transacao.descricao });
+    } else {
+      res.status(404).json({ error: 'Transação não encontrada.' });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao obter transação.' });
+  }
+});
+
+
+
+
+app.get('/users/:id', async (req, res) => {
+  const id = parseInt(req.params.id);
+
+  if (Number.isNaN(id)) {
+    res.status(400).json({ error: 'Invalid user ID' });
+    return;
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: id },
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 const port = 3000;
 

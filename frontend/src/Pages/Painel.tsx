@@ -5,13 +5,16 @@ import { useParams } from 'react-router-dom';
 const Painel: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [saldo, setSaldo] = useState<number>(0);
-  const [valor, setValor] = useState<string>('0');
-  const { userId } = useParams();
+  const [valorAdicionar, setValorAdicionar] = useState<string>('');
+  const [valorSubtrair, setValorSubtrair] = useState<string>('');
+  const [descricao, setDescricao] = useState<string>('');
+
+  const { userId } = useParams<{ userId: string }>();
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await axios.get(`http://localhost:3000/me/${userId}`);
+        const response = await axios.get(`http://localhost:3000/users/${userId}`);
         setUser(response.data);
       } catch (error) {
         console.error(error);
@@ -25,7 +28,7 @@ const Painel: React.FC = () => {
     const fetchSaldo = async () => {
       try {
         if (userId) {
-          const response = await axios.get(`http://localhost:3000/saldo/${userId}`);
+          const response = await axios.get(`http://localhost:3000/saldo?userId=${userId}`);
           setSaldo(response.data.saldo);
         }
       } catch (error) {
@@ -37,27 +40,67 @@ const Painel: React.FC = () => {
   }, [userId]);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setValor(e.target.value);
+    if (e.target.name === 'adicionar') {
+      setValorAdicionar(e.target.value);
+    } else if (e.target.name === 'subtrair') {
+      setValorSubtrair(e.target.value);
+    } else if (e.target.name === 'descricao') {
+      setDescricao(e.target.value);
+    }
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-  
+
     try {
-      if (user && user.contas.length > 0) {
-        const contaId = user.contas[0].id;
-        const response = await axios.post(
-          `http://localhost:3000/contas/${contaId}/adicionar-saldo`,
-          { valor: parseFloat(valor) }
+      if (user && user.id) {
+        const response = await axios.put(
+          `http://localhost:3000/saldo/${userId}`,
+          {
+            saldo: parseFloat(valorAdicionar),
+            descricao: descricao,
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
         );
         setSaldo(response.data.saldo);
-        setValor('0');
+        setValorAdicionar('');
+        setDescricao('');
       }
     } catch (error) {
       console.error(error);
     }
   };
-  
+
+  const handleRetirada = async (e: FormEvent) => {
+    e.preventDefault();
+
+    try {
+      if (user && user.id) {
+        const response = await axios.put(
+          `http://localhost:3000/saldo/${userId}`,
+          {
+            saldo: -parseFloat(valorSubtrair),
+            descricao: descricao,
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        setSaldo(response.data.saldo);
+        setValorSubtrair('');
+        setDescricao('');
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   return (
     <div>
       <h1>Painel</h1>
@@ -67,10 +110,35 @@ const Painel: React.FC = () => {
         <input
           type="number"
           step="0.01"
-          value={valor}
+          name="adicionar"
+          value={valorAdicionar}
           onChange={handleInputChange}
         />
-        <button type="submit">Adicionar saldo</button>
+        <input
+          type="text"
+          name="descricao"
+          value={descricao}
+          onChange={handleInputChange}
+          placeholder="Descrição da transação"
+        />
+        <button type="submit">Adicionar</button>
+      </form>
+      <form onSubmit={handleRetirada}>
+        <input
+          type="number"
+          step="0.01"
+          name="subtrair"
+          value={valorSubtrair}
+          onChange={handleInputChange}
+        />
+        <input
+          type="text"
+          name="descricao"
+          value={descricao}
+          onChange={handleInputChange}
+          placeholder="Descrição da transação"
+        />
+        <button type="submit">Retirar</button>
       </form>
     </div>
   );
