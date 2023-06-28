@@ -8,6 +8,7 @@ const Painel: React.FC = () => {
   const [valorAdicionar, setValorAdicionar] = useState<string>('');
   const [valorSubtrair, setValorSubtrair] = useState<string>('');
   const [descricao, setDescricao] = useState<string>('');
+  const [transacoes, setTransacoes] = useState<string[]>([]);
 
   const { userId } = useParams<{ userId: string }>();
 
@@ -39,6 +40,24 @@ const Painel: React.FC = () => {
     fetchSaldo();
   }, [userId]);
 
+  useEffect(() => {
+    const fetchTransacoes = async () => {
+      try {
+        if (userId) {
+          const response = await axios.get(`http://localhost:3000/transacoes/${userId}`);
+          console.log(response.data); 
+          setTransacoes(response.data.map((transacao: any) => transacao.descricao));
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+  
+    fetchTransacoes();
+  }, [userId]);
+  
+  
+
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.name === 'adicionar') {
       setValorAdicionar(e.target.value);
@@ -66,10 +85,11 @@ const Painel: React.FC = () => {
             },
           }
         );
-        setSaldo(response.data.saldo);
+        setSaldo(parseFloat(response.data.saldo));
         setValorAdicionar('');
         setDescricao('');
       }
+      window.location.reload();
     } catch (error) {
       console.error(error);
     }
@@ -92,10 +112,11 @@ const Painel: React.FC = () => {
             },
           }
         );
-        setSaldo(response.data.saldo);
+        setSaldo(parseFloat(response.data.saldo));
         setValorSubtrair('');
         setDescricao('');
       }
+      window.location.reload();
     } catch (error) {
       console.error(error);
     }
@@ -106,6 +127,16 @@ const Painel: React.FC = () => {
       <h1>Painel</h1>
       {user && <p>Olá, {user.nome}!</p>}
       <p>Saldo: R$ {saldo.toFixed(2)}</p>
+
+      <div>
+        <h2>Transações</h2>
+        <ul>
+          {transacoes.map((transacao, index) => (
+            <li key={index}>{transacao}</li>
+          ))}
+        </ul>
+      </div>
+
       <form onSubmit={handleSubmit}>
         <input
           type="number"
@@ -123,6 +154,7 @@ const Painel: React.FC = () => {
         />
         <button type="submit">Adicionar</button>
       </form>
+
       <form onSubmit={handleRetirada}>
         <input
           type="number"

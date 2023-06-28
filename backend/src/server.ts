@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
+import { v4 as uuidv4 } from 'uuid';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -121,64 +122,6 @@ app.get('/saldo', async (req, res) => {
 
 app.put('/saldo/:userId', async (req, res) => {
   const { userId } = req.params;
-  const { saldo } = req.body;
-
-  try {
-    const existingConta = await prisma.conta.findFirst({
-      where: { userId: parseInt(userId) },
-    });
-
-    if (!existingConta) {
-      return res.status(404).json({ error: 'Conta não encontrada.' });
-    }
-
-    const updatedSaldo = existingConta.saldo + parseInt(saldo);
-
-    const updatedConta = await prisma.conta.update({
-      where: { userId: parseInt(userId) },
-      data: { saldo: updatedSaldo },
-    });
-
-    res.json(updatedConta);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erro ao atualizar saldo.' });
-  }
-});
-
-app.put('/saldo/:userId', async (req, res) => {
-  const { userId } = req.params;
-  const { saldo } = req.body;
-
-  try {
-    const existingConta = await prisma.conta.findFirst({
-      where: { userId: parseInt(userId) },
-    });
-
-    if (!existingConta) {
-      return res.status(404).json({ error: 'Conta não encontrada.' });
-    }
-
-    const updatedSaldo = existingConta.saldo - parseInt(saldo);
-
-    if (updatedSaldo < 0) {
-      return res.status(400).json({ error: 'Saldo insuficiente para a retirada.' });
-    }
-
-    const updatedConta = await prisma.conta.update({
-      where: { userId: parseInt(userId) },
-      data: { saldo: updatedSaldo },
-    });
-
-    res.json(updatedConta);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Erro ao atualizar saldo.' });
-  }
-});
-
-app.put('/saldo/:userId', async (req, res) => {
-  const { userId } = req.params;
   const { saldo, descricao } = req.body;
 
   try {
@@ -197,39 +140,43 @@ app.put('/saldo/:userId', async (req, res) => {
       data: { saldo: updatedSaldo },
     });
 
+    let operacaoDescricao = '';
+    if (parseFloat(saldo) > 0) {
+      operacaoDescricao = 'Adição de saldo';
+    } else if (parseFloat(saldo) < 0) {
+      operacaoDescricao = 'Retirada de saldo';
+    }
+
+    const descricaoTransacao = `${operacaoDescricao} - ${Math.abs(parseFloat(saldo))}`;
+
     const transacao = await prisma.transacao.create({
       data: {
-        descricao: descricao,
+        descricao: descricaoTransacao,
         valor: parseFloat(saldo),
         userId: parseInt(userId),
         contaId: existingConta.id,
       },
     });
 
-    res.json(updatedConta);
+    res.json({ saldo: updatedConta.saldo, descricaoTransacao });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Erro ao atualizar saldo.' });
   }
 });
 
-
-app.get('/transacoes/:id', async (req, res) => {
-  const { id } = req.params;
+app.get('/transacoes/:userId', async (req, res) => {
+  const userId = parseInt(req.params.userId);
 
   try {
-    const transacao = await prisma.transacao.findUnique({
-      where: { id: parseInt(id) },
+    const transacoes = await prisma.transacao.findMany({
+      where: { userId: userId },
     });
 
-    if (transacao) {
-      res.json({ descricao: transacao.descricao });
-    } else {
-      res.status(404).json({ error: 'Transação não encontrada.' });
-    }
+    res.json(transacoes);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Erro ao obter transação.' });
+    res.status(500).json({ error: 'Erro ao obter transações.' });
   }
 });
 
