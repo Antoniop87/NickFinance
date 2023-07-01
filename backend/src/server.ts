@@ -40,6 +40,31 @@ app.post('/users', async (req, res) => {
   }
 });
 
+app.delete('/users/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    await prisma.transacao.deleteMany({
+      where: { userId: parseInt(id) },
+    });
+
+    await prisma.conta.delete({
+      where: { userId: parseInt(id) },
+    });
+
+    await prisma.user.delete({
+      where: { id: parseInt(id) },
+    });
+
+    res.json({ message: 'Usuário e suas transações relacionadas foram excluídos com sucesso.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao excluir usuário e suas transações relacionadas.' });
+  }
+});
+
+
+
 app.post('/login', async (req, res) => {
   const { email, senha } = req.body;
 

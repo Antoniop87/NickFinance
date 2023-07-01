@@ -45,18 +45,18 @@ const Painel: React.FC = () => {
       try {
         if (userId) {
           const response = await axios.get(`http://localhost:3000/transacoes/${userId}`);
-          console.log(response.data); 
+          console.log(response.data);
           setTransacoes(response.data.map((transacao: any) => transacao.descricao));
         }
       } catch (error) {
         console.error(error);
       }
     };
-  
+
     fetchTransacoes();
   }, [userId]);
-  
-  
+
+
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.name === 'adicionar') {
@@ -124,54 +124,44 @@ const Painel: React.FC = () => {
 
   return (
     <div>
-      <h1>Painel</h1>
-      {user && <p>Olá, {user.nome}!</p>}
-      <p>Saldo: R$ {saldo.toFixed(2)}</p>
-
-      <div>
-        <h2>Transações</h2>
-        <ul>
-          {transacoes.map((transacao, index) => (
-            <li key={index}>{transacao}</li>
-          ))}
-        </ul>
+      <div className='flex justify-between items-center bg-blue-500 h-52'>
+        {user && <p className=' justify-start m-10 text-white font-semibold text-3xl'>
+          Olá, {user.nome}!
+        </p>}
+        <p className=' justify-end m-10 text-white font-semibold text-xl'>
+          Saldo: R$ {saldo.toFixed(2)}
+        </p>
       </div>
-
-      <form onSubmit={handleSubmit}>
-        <input
-          type="number"
-          step="0.01"
-          name="adicionar"
-          value={valorAdicionar}
-          onChange={handleInputChange}
-        />
-        <input
-          type="text"
-          name="descricao"
-          value={descricao}
-          onChange={handleInputChange}
-          placeholder="Descrição da transação"
-        />
-        <button type="submit">Adicionar</button>
-      </form>
-
-      <form onSubmit={handleRetirada}>
-        <input
-          type="number"
-          step="0.01"
-          name="subtrair"
-          value={valorSubtrair}
-          onChange={handleInputChange}
-        />
-        <input
-          type="text"
-          name="descricao"
-          value={descricao}
-          onChange={handleInputChange}
-          placeholder="Descrição da transação"
-        />
-        <button type="submit">Retirar</button>
-      </form>
+      <div>
+        <form onSubmit={handleSubmit}>
+          <input
+            type="number"
+            step="0.01"
+            name="adicionar"
+            value={valorAdicionar}
+            onChange={handleInputChange}
+          />
+          <button type="submit">Adicionar</button>
+        </form>
+        <form onSubmit={handleRetirada}>
+          <input
+            type="number"
+            step="0.01"
+            name="subtrair"
+            value={valorSubtrair}
+            onChange={handleInputChange}
+          />
+          <button type="submit">Retirar</button>
+        </form>
+        <div>
+          <h2>Transações</h2>
+          <ul>
+            {transacoes.map((transacao, index) => (
+              <li key={index}>{transacao}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </div>
   );
 };
